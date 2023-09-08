@@ -273,7 +273,7 @@ public class Device_BENCHLAB {
 
         deviceList = new List<Device_BENCHLAB>();
 
-        List<string> ports = GetEfcPorts();
+        List<string> ports = GetBenchlabPorts();
 
         // Connect to first available device
         foreach(string port in ports) {
@@ -286,7 +286,7 @@ public class Device_BENCHLAB {
 
     }
 
-    private static List<string> GetEfcPorts()
+    private static List<string> GetBenchlabPorts()
     {
         List<string> ports = new();
 
@@ -297,7 +297,7 @@ public class Device_BENCHLAB {
 
             try
             {
-                masterRegKey = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Enum\USB\VID_1A86&PID_7523");
+                masterRegKey = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Enum\USB\VID_0483&PID_5740");
             }
             catch
             {
