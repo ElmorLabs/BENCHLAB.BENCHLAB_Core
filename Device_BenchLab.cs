@@ -27,12 +27,14 @@ public class Device_BENCHLAB {
     #endregion
 
     #region Device-specific Structs
+
     public struct VendorDataStruct {
         public byte VendorId;
         public byte ProductId;
         public byte FwVersion;
     }
 
+    //[StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct PowerSensor
     {
         public short Voltage;
@@ -47,6 +49,7 @@ public class Device_BENCHLAB {
         public byte Duty;
     };
 
+    //[StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct SensorStruct
     {
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = SENSOR_VIN_NUM)] public short[] Vin;
@@ -58,7 +61,8 @@ public class Device_BENCHLAB {
         public short Hum;
         public ushort FanSel;
         public byte FanExt;
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = SENSOR_POWER_NUM*6)] public PowerSensor[] PowerReadings;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = SENSOR_POWER_NUM)] public PowerSensor[] PowerReadings;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = FAN_NUM)] public FanSensor[] Fans;
     }
 
     public struct FanConfigStruct {
@@ -467,7 +471,7 @@ public class Device_BENCHLAB {
 
         SensorList[sensorCount++].Value = sensorStruct.Vdd / 1000.0f;
         SensorList[sensorCount++].Value = sensorStruct.Vref / 1000.0f;
-        SensorList[sensorCount++].Value = sensorStruct.Tchip == 0x7FFF ? double.MinValue : sensorStruct.Tchip / 10.0f;
+        SensorList[sensorCount++].Value = sensorStruct.Tchip;
 
         for (int i = 0; i < SENSOR_TS_NUM; i++)
         {
