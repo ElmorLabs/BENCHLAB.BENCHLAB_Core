@@ -6,7 +6,8 @@ using System.Text;
 using System.Threading.Tasks;
 using static System.Net.Mime.MediaTypeNames;
 
-namespace EFC_Core {
+namespace BENCHLAB_Core
+{
     public class EEBL0 {
 
         private const string WELCOME_STRING = "EEBL0";

@@ -4,7 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EFC_Core {
+namespace BENCHLAB_Core
+{
     public static class Helper {
 
         public static UInt16 CRC16_Calc(byte[] data, int offset, int length) {

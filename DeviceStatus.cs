@@ -1,4 +1,4 @@
-﻿namespace EFC_Core;
+﻿namespace BENCHLAB_Core;
 
 public enum DeviceStatus
 {
