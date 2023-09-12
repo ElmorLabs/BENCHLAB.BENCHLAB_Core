@@ -201,13 +201,13 @@ public class Device_BENCHLAB {
 
         for (int i = 0; i < SENSOR_TS_NUM; i++)
         {
-            SensorList.Add(new Sensor(sensorCount++, $"Temperature Sensor #{i + 1}", $"TS{i + 1}", SensorType.Voltage));
+            SensorList.Add(new Sensor(sensorCount++, $"Temperature Sensor #{i + 1}", $"TS{i + 1}", SensorType.Temperature));
         }
 
         SensorList.Add(new Sensor(sensorCount++, "Ambient Temperature", "T_AMB", SensorType.Temperature));
         SensorList.Add(new Sensor(sensorCount++, "Humidity", "HUM", SensorType.Humidity));
         SensorList.Add(new Sensor(sensorCount++, "Fan Select", "FAN_SEL", SensorType.Voltage));
-        SensorList.Add(new Sensor(sensorCount++, "Fan External", "FAN_EXT", SensorType.Usage));
+        SensorList.Add(new Sensor(sensorCount++, "Fan External", "FAN_EXT", SensorType.Duty));
 
         for (int i = 0; i < SENSOR_POWER_NUM; i++)
         {

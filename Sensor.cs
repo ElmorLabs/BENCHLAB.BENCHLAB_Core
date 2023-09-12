@@ -22,6 +22,7 @@ namespace BENCHLAB_Core
     {
         public Sensor(int id, string shortName, string name, SensorType type)
         {
+            Id = id;
             ShortName = shortName;
             Name = name;
             Type = type;
