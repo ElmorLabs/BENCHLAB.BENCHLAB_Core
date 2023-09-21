@@ -6,7 +6,8 @@ using System.Text;
 
 namespace BENCHLAB_Core;
 
-public class Device_BENCHLAB {
+public class Device_BENCHLAB
+{
 
     #region Device-specific Consts
 
@@ -24,11 +25,15 @@ public class Device_BENCHLAB {
     public const int SENSOR_VIN_NUM = 13;
     public const int SENSOR_POWER_NUM = 11;
 
+    readonly string[] PowerSensorNames = { "EPS1", "EPS2", "ATX3V", "ATX5V", "ATX5VSB", "ATX12V", "PCIE1", "PCIE2", "PCIE3", "HPWR1", "HPWR2" };
+
+
     #endregion
 
     #region Device-specific Structs
 
-    public struct VendorDataStruct {
+    public struct VendorDataStruct
+    {
         public byte VendorId;
         public byte ProductId;
         public byte FwVersion;
@@ -65,7 +70,8 @@ public class Device_BENCHLAB {
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = FAN_NUM)] public FanSensor[] Fans;
     }
 
-    public struct FanConfigStruct {
+    public struct FanConfigStruct
+    {
         public FAN_MODE FanMode;
         public TEMP_SRC TempSource;
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = FAN_CURVE_NUM_POINTS)] public short[] Temp;
@@ -76,26 +82,30 @@ public class Device_BENCHLAB {
         public byte MaxDuty;
     }
 
-    public struct DeviceConfigStruct {
+    public struct DeviceConfigStruct
+    {
         public ushort Crc;
         public byte ActiveFanProfileId;
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = PROFILE_NUM)] public ProfileConfigStruct[] FanProfile;
     }
 
-    public struct ProfileConfigStruct {
+    public struct ProfileConfigStruct
+    {
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = FAN_NUM)] public FanConfigStruct[] FanConfig;
     }
     #endregion
 
     #region Device-specific Enums
 
-    public enum FAN_MODE : byte {
+    public enum FAN_MODE : byte
+    {
         FAN_MODE_TEMP_CONTROL,
         FAN_MODE_FIXED,
         FAN_MODE_EXT
     }
 
-    public enum TEMP_SRC : byte {
+    public enum TEMP_SRC : byte
+    {
         TEMP_SRC_AUTO,
         TEMP_SRC_TS1,
         TEMP_SRC_TS2,
@@ -104,18 +114,21 @@ public class Device_BENCHLAB {
         TEMP_SRC_TAMB
     }
 
-    private enum UART_CMD : byte {
+    private enum UART_CMD : byte
+    {
         UART_CMD_WELCOME = (byte)'0',
         UART_CMD_READ_SENSOR_VALUES = (byte)'1'
     }
 
-    private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0) {
+    private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
+    {
         byte[] returnArray = new byte[len + 1];
         returnArray[0] = (byte)uartCMD;
         return returnArray;
     }
 
-    private enum UART_NVM_CMD : byte {
+    private enum UART_NVM_CMD : byte
+    {
         CONFIG_SAVE,
         CONFIG_LOAD,
         CONFIG_RESET
@@ -157,13 +170,16 @@ public class Device_BENCHLAB {
 
     #region Connection
 
-    public virtual bool Connect(string comPort = "COM34") {
+    public virtual bool Connect(string comPort = "COM34")
+    {
 
         Port = comPort;
         Status = DeviceStatus.CONNECTING;
 
-        try {
-            _serialPort = new SerialPort(comPort) {
+        try
+        {
+            _serialPort = new SerialPort(comPort)
+            {
                 BaudRate = 115200,
                 Parity = Parity.None,
                 DataBits = 8,
@@ -175,15 +191,20 @@ public class Device_BENCHLAB {
                 DtrEnable = true
             };
 
-        } catch ( Exception e ) {
+        }
+        catch (Exception e)
+        {
             Status = DeviceStatus.ERROR;
             return false;
         }
 
-        try {
+        try
+        {
             _serialPort.Open();
             _serialPort.DataReceived += SerialPortOnDataReceived;
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             Status = DeviceStatus.ERROR;
             return false;
         }
@@ -209,24 +230,34 @@ public class Device_BENCHLAB {
         SensorList.Add(new Sensor(sensorCount++, "Fan Select", "FAN_SEL", SensorType.Voltage));
         SensorList.Add(new Sensor(sensorCount++, "Fan External", "FAN_EXT", SensorType.Duty));
 
-        for (int i = 0; i < SENSOR_POWER_NUM; i++)
+        foreach (string power_sensor in PowerSensorNames)
         {
-            //SensorList.Add(new Sensor(sensorCount++, $" #{i + 1}", $"TS{i + 1}", SensorType.Voltage));
+            for (int i = 0; i < 3; i++)
+            {
+                SensorList.Add(new Sensor(sensorCount++, $"{power_sensor} Voltage", $"{power_sensor}_V", SensorType.Voltage));
+                SensorList.Add(new Sensor(sensorCount++, $"{power_sensor} Current", $"{power_sensor}_I", SensorType.Current));
+                SensorList.Add(new Sensor(sensorCount++, $"{power_sensor} Power", $"{power_sensor}_P", SensorType.Power));
+            }
         }
 
         bool connected = CheckWelcomeMessage();
 
-        if(connected) {
+        if (connected)
+        {
 
-            if(Version > 2) {
+            if (Version > 2)
+            {
                 // Update UID
                 //connected = UpdateUID();
             }
         }
 
-        if(connected) {
+        if (connected)
+        {
             Status = DeviceStatus.CONNECTED;
-        } else {
+        }
+        else
+        {
             Status = DeviceStatus.ERROR;
         }
 
@@ -235,10 +266,12 @@ public class Device_BENCHLAB {
         return connected;
     }
 
-    public virtual bool Disconnect() {
+    public virtual bool Disconnect()
+    {
         Status = DeviceStatus.DISCONNECTING;
 
-        if(_serialPort != null) {
+        if (_serialPort != null)
+        {
             try
             {
                 _serialPort.DataReceived -= SerialPortOnDataReceived;
@@ -246,11 +279,15 @@ public class Device_BENCHLAB {
                 _serialPort.Close();
                 _serialPort.Dispose();
                 _serialPort = null;
-            } catch {
+            }
+            catch
+            {
                 Status = DeviceStatus.ERROR;
                 return false;
             }
-        } else {
+        }
+        else
+        {
             return false;
         }
 
@@ -273,16 +310,19 @@ public class Device_BENCHLAB {
 
     }*/
 
-    public static void GetAvailableDevices(out List<Device_BENCHLAB> deviceList) {
+    public static void GetAvailableDevices(out List<Device_BENCHLAB> deviceList)
+    {
 
         deviceList = new List<Device_BENCHLAB>();
 
         List<string> ports = GetBenchlabPorts();
 
         // Connect to first available device
-        foreach(string port in ports) {
+        foreach (string port in ports)
+        {
             Device_BENCHLAB temp_device = new Device_BENCHLAB();
-            if(temp_device.Connect(port)) {
+            if (temp_device.Connect(port))
+            {
                 deviceList.Add(temp_device);
             }
             //temp_device.Disconnect();
@@ -359,7 +399,7 @@ public class Device_BENCHLAB {
                 return ports;
             }
         }
-        
+
         return ports;
     }
 
@@ -416,7 +456,8 @@ public class Device_BENCHLAB {
 
     #region Functionality
 
-    public virtual bool UpdateSensors() {
+    public virtual bool UpdateSensors()
+    {
         byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_READ_SENSOR_VALUES);
         byte[] rxBuffer;
 
@@ -457,6 +498,10 @@ public class Device_BENCHLAB {
                 sensorStruct = (SensorStruct)structObj;
             }
         }
+        catch
+        {
+            return false;
+        }
         finally
         {
             Marshal.FreeHGlobal(ptr);
@@ -482,6 +527,13 @@ public class Device_BENCHLAB {
         SensorList[sensorCount++].Value = sensorStruct.Hum / 10.0f;
         SensorList[sensorCount++].Value = sensorStruct.FanSel / 1000.0f;
         SensorList[sensorCount++].Value = sensorStruct.FanExt;
+
+        for (int i = 0; i < SENSOR_POWER_NUM; i++)
+        {
+            SensorList[sensorCount++].Value = sensorStruct.PowerReadings[i].Voltage;
+            SensorList[sensorCount++].Value = sensorStruct.PowerReadings[i].Current;
+            SensorList[sensorCount++].Value = sensorStruct.PowerReadings[i].Power;
+        }
 
         return true;
     }
@@ -606,15 +658,17 @@ public class Device_BENCHLAB {
     #region Private Methods
 
     // Check device welcome message
-    private bool CheckWelcomeMessage() {
+    private bool CheckWelcomeMessage()
+    {
         byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_WELCOME);
-        if(!SendCommand(txBuffer, out byte[] rxBuffer, 13)) {
+        if (!SendCommand(txBuffer, out byte[] rxBuffer, 13))
+        {
             return false;
         }
 
         string welcome_str = Encoding.ASCII.GetString(rxBuffer, 0, 13);
 
-        if(string.Compare(welcome_str, "OBT BenchLab") != 0) return false;
+        if (string.Compare(welcome_str, "OBT BenchLab") != 0) return false;
 
         return true;
     }
@@ -645,7 +699,8 @@ public class Device_BENCHLAB {
     }*/
 
     // Data reception event
-    private void SerialPortOnDataReceived(object sender, SerialDataReceivedEventArgs e) {
+    private void SerialPortOnDataReceived(object sender, SerialDataReceivedEventArgs e)
+    {
         SerialPort serialPort = (SerialPort)sender;
         byte[] data = new byte[serialPort.BytesToRead];
         serialPort.Read(data, 0, data.Length);
@@ -653,7 +708,8 @@ public class Device_BENCHLAB {
     }
 
     // Send command to BenchLab
-    private bool SendCommand(byte[] txBuffer, out byte[] rxBuffer, int rxLen) {
+    private bool SendCommand(byte[] txBuffer, out byte[] rxBuffer, int rxLen)
+    {
         if (_serialPort == null) throw new Exception("Serial port has not been initialized!"); //return false;
 
         if (!_serialPort.IsOpen) _serialPort.Open();
@@ -666,23 +722,25 @@ public class Device_BENCHLAB {
             _serialPort.Write(txBuffer, 0, txBuffer.Length);
             int timeout = 50;
 
-            while(timeout-- > 0 && RxData.Count != rxLen) {
+            while (timeout-- > 0 && RxData.Count != rxLen)
+            {
                 Thread.Sleep(10);
             }
 
-            if(RxData.Count != rxBuffer.Length)
+            if (RxData.Count != rxBuffer.Length)
             {
                 //throw new Exception($"Buffer size mismatch! Expected {rxLen}, got {RxData.Count}");
                 return false;
             }
 
             rxBuffer = RxData.ToArray();
-        } catch
+        }
+        catch
         {
             //throw;
             return false;
         }
-        
+
         return true;
     }
 
