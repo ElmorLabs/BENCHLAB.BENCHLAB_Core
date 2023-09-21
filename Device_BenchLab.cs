@@ -214,33 +214,33 @@ public class Device_BENCHLAB
         int sensorCount;
         for (sensorCount = 0; sensorCount < SENSOR_VIN_NUM; sensorCount++)
         {
-            SensorList.Add(new Sensor(sensorCount, $"Voltage #{sensorCount + 1}", $"V{sensorCount + 1}", SensorType.Voltage));
+            SensorList.Add(new Sensor(sensorCount, $"V{sensorCount + 1}", $"Voltage #{sensorCount + 1}", SensorType.Voltage));
         }
 
-        SensorList.Add(new Sensor(sensorCount++, "Supply Voltage", "VDD", SensorType.Voltage));
-        SensorList.Add(new Sensor(sensorCount++, "Reference Voltage", "VREF", SensorType.Voltage));
-        SensorList.Add(new Sensor(sensorCount++, "Chip Temperature", "T_CHIP", SensorType.Temperature));
+        SensorList.Add(new Sensor(sensorCount++, "VDD", "Supply Voltage", SensorType.Voltage));
+        SensorList.Add(new Sensor(sensorCount++, "VREF", "Reference Voltage", SensorType.Voltage));
+        SensorList.Add(new Sensor(sensorCount++, "T_CHIP", "Chip Temperature", SensorType.Temperature));
 
         for (int i = 0; i < SENSOR_TS_NUM; i++)
         {
-            SensorList.Add(new Sensor(sensorCount++, $"Temperature Sensor #{i + 1}", $"TS{i + 1}", SensorType.Temperature));
+            SensorList.Add(new Sensor(sensorCount++, $"TS{i + 1}", $"Temperature Sensor #{i + 1}", SensorType.Temperature));
         }
 
-        SensorList.Add(new Sensor(sensorCount++, "Ambient Temperature", "T_AMB", SensorType.Temperature));
-        SensorList.Add(new Sensor(sensorCount++, "Humidity", "HUM", SensorType.Humidity));
-        SensorList.Add(new Sensor(sensorCount++, "Fan Select", "FAN_SEL", SensorType.Voltage));
-        SensorList.Add(new Sensor(sensorCount++, "Fan External", "FAN_EXT", SensorType.Duty));
+        SensorList.Add(new Sensor(sensorCount++, "T_AMB", "Ambient Temperature", SensorType.Temperature));
+        SensorList.Add(new Sensor(sensorCount++, "HUM", "Humidity", SensorType.Humidity));
+        SensorList.Add(new Sensor(sensorCount++, "FAN_SEL", "Fan Select", SensorType.Voltage));
+        SensorList.Add(new Sensor(sensorCount++, "FAN_EXT", "Fan External", SensorType.Duty));
 
-        SensorList.Add(new Sensor(sensorCount++, "System Power", $"SYS_P", SensorType.Power));
-        SensorList.Add(new Sensor(sensorCount++, "CPU Power", $"CPU_P", SensorType.Power));
-        SensorList.Add(new Sensor(sensorCount++, "GPU Power", $"GPU_P", SensorType.Power));
-        SensorList.Add(new Sensor(sensorCount++, "Motherboard Power", $"MB_P", SensorType.Power));
+        SensorList.Add(new Sensor(sensorCount++, $"SYS_P", "System Power", SensorType.Power));
+        SensorList.Add(new Sensor(sensorCount++, $"CPU_P", "CPU Power", SensorType.Power));
+        SensorList.Add(new Sensor(sensorCount++, $"GPU_P", "GPU Power", SensorType.Power));
+        SensorList.Add(new Sensor(sensorCount++, $"MB_P", "Motherboard Power", SensorType.Power));
 
         foreach (string power_sensor in PowerSensorNames)
         {
-            SensorList.Add(new Sensor(sensorCount++, $"{power_sensor} Voltage", $"{power_sensor}_V", SensorType.Voltage));
-            SensorList.Add(new Sensor(sensorCount++, $"{power_sensor} Current", $"{power_sensor}_I", SensorType.Current));
-            SensorList.Add(new Sensor(sensorCount++, $"{power_sensor} Power", $"{power_sensor}_P", SensorType.Power));
+            SensorList.Add(new Sensor(sensorCount++, $"{power_sensor}_V", $"{power_sensor} Voltage", SensorType.Voltage));
+            SensorList.Add(new Sensor(sensorCount++, $"{power_sensor}_I", $"{power_sensor} Current", SensorType.Current));
+            SensorList.Add(new Sensor(sensorCount++, $"{power_sensor}_P", $"{power_sensor} Power", SensorType.Power));
         }
 
         bool connected = CheckWelcomeMessage();
