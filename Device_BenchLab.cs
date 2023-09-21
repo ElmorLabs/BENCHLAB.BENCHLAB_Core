@@ -3,6 +3,7 @@ using System;
 using System.IO.Ports;
 using System.Runtime.InteropServices;
 using System.Text;
+using static BENCHLAB_Core.Device_BENCHLAB;
 
 namespace BENCHLAB_Core;
 
@@ -230,14 +231,16 @@ public class Device_BENCHLAB
         SensorList.Add(new Sensor(sensorCount++, "Fan Select", "FAN_SEL", SensorType.Voltage));
         SensorList.Add(new Sensor(sensorCount++, "Fan External", "FAN_EXT", SensorType.Duty));
 
+        SensorList.Add(new Sensor(sensorCount++, "System Power", $"SYS_P", SensorType.Power));
+        SensorList.Add(new Sensor(sensorCount++, "CPU Power", $"CPU_P", SensorType.Power));
+        SensorList.Add(new Sensor(sensorCount++, "GPU Power", $"GPU_P", SensorType.Power));
+        SensorList.Add(new Sensor(sensorCount++, "Motherboard Power", $"MB_P", SensorType.Power));
+
         foreach (string power_sensor in PowerSensorNames)
         {
-            for (int i = 0; i < 3; i++)
-            {
-                SensorList.Add(new Sensor(sensorCount++, $"{power_sensor} Voltage", $"{power_sensor}_V", SensorType.Voltage));
-                SensorList.Add(new Sensor(sensorCount++, $"{power_sensor} Current", $"{power_sensor}_I", SensorType.Current));
-                SensorList.Add(new Sensor(sensorCount++, $"{power_sensor} Power", $"{power_sensor}_P", SensorType.Power));
-            }
+            SensorList.Add(new Sensor(sensorCount++, $"{power_sensor} Voltage", $"{power_sensor}_V", SensorType.Voltage));
+            SensorList.Add(new Sensor(sensorCount++, $"{power_sensor} Current", $"{power_sensor}_I", SensorType.Current));
+            SensorList.Add(new Sensor(sensorCount++, $"{power_sensor} Power", $"{power_sensor}_P", SensorType.Power));
         }
 
         bool connected = CheckWelcomeMessage();
@@ -511,7 +514,7 @@ public class Device_BENCHLAB
         int sensorCount;
         for (sensorCount = 0; sensorCount < SENSOR_VIN_NUM; sensorCount++)
         {
-            SensorList[sensorCount].Value = sensorStruct.Vin[sensorCount] == 0x7FFF ? double.MinValue : sensorStruct.Vin[sensorCount] / 100.0f;
+            SensorList[sensorCount].Value = sensorStruct.Vin[sensorCount] == 0x7FFF ? double.MinValue : sensorStruct.Vin[sensorCount] / 1000.0f;
         }
 
         SensorList[sensorCount++].Value = sensorStruct.Vdd / 1000.0f;
@@ -526,13 +529,26 @@ public class Device_BENCHLAB
         SensorList[sensorCount++].Value = sensorStruct.Tamb / 10.0f;
         SensorList[sensorCount++].Value = sensorStruct.Hum / 10.0f;
         SensorList[sensorCount++].Value = sensorStruct.FanSel / 1000.0f;
-        SensorList[sensorCount++].Value = sensorStruct.FanExt;
+        SensorList[sensorCount++].Value = sensorStruct.FanExt == 255 ? double.MinValue : sensorStruct.FanExt;
+
+        // Calculate total power, cpu power, gpu power, mb power
+        // readonly string[] PowerSensorNames = { "EPS1", "EPS2", "ATX3V", "ATX5V", "ATX5VSB", "ATX12V", "PCIE1", "PCIE2", "PCIE3", "HPWR1", "HPWR2" };
+
+        double cpu_power = sensorStruct.PowerReadings[0].Power + sensorStruct.PowerReadings[1].Power; // EPS1 + EPS2
+        double gpu_power = sensorStruct.PowerReadings[6].Power + sensorStruct.PowerReadings[7].Power + sensorStruct.PowerReadings[8].Power + sensorStruct.PowerReadings[9].Power + sensorStruct.PowerReadings[10].Power;
+        double mb_power = sensorStruct.PowerReadings[2].Power + sensorStruct.PowerReadings[3].Power + sensorStruct.PowerReadings[4].Power + sensorStruct.PowerReadings[5].Power;
+        double total_power = cpu_power + gpu_power + mb_power;
+
+        SensorList[sensorCount++].Value = total_power / 1000.0f;
+        SensorList[sensorCount++].Value = cpu_power / 1000.0f;
+        SensorList[sensorCount++].Value = gpu_power / 1000.0f;
+        SensorList[sensorCount++].Value = mb_power / 1000.0f;
 
         for (int i = 0; i < SENSOR_POWER_NUM; i++)
         {
-            SensorList[sensorCount++].Value = sensorStruct.PowerReadings[i].Voltage;
-            SensorList[sensorCount++].Value = sensorStruct.PowerReadings[i].Current;
-            SensorList[sensorCount++].Value = sensorStruct.PowerReadings[i].Power;
+            SensorList[sensorCount++].Value = sensorStruct.PowerReadings[i].Voltage / 1000.0f;
+            SensorList[sensorCount++].Value = sensorStruct.PowerReadings[i].Current / 1000.0f;
+            SensorList[sensorCount++].Value = sensorStruct.PowerReadings[i].Power / 1000.0f;
         }
 
         return true;
