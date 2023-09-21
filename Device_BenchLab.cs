@@ -37,9 +37,9 @@ public class Device_BENCHLAB {
     //[StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct PowerSensor
     {
-        public short Voltage;
-        public short Current;
-        public short Power;
+        public Int32 Voltage;
+        public Int32 Current;
+        public Int32 Power;
     };
 
     public struct FanSensor
