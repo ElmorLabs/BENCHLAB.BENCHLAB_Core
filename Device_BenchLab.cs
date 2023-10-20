@@ -16,7 +16,7 @@ public class Device_BENCHLAB
     public const int PRODUCT_ID = 0x10;
     public const int FIRMWARE_VERSION = 0x01;
 
-    public const int PROFILE_NUM = 2;
+    public const int FAN_PROFILE_NUM = 3;
 
     public const int FAN_NUM = 9;
     public const int FAN_CURVE_NUM_POINTS = 2;
@@ -51,8 +51,8 @@ public class Device_BENCHLAB
     public struct FanSensor
     {
         public byte Enable;
-        public ushort Tach;
         public byte Duty;
+        public ushort Tach;
     };
 
     //[StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -64,9 +64,11 @@ public class Device_BENCHLAB
         public short Tchip;
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = SENSOR_TS_NUM)] public short[] Ts;
         public short Tamb;
-        public short Hum;
-        public ushort FanSel;
-        public byte FanExt;
+        public ushort Hum;
+        public FAN_SWITCH_STATUS FanSwitch;
+        public RGB_SWITCH_STATUS RgbSwitch;
+        public RGB_EXT_STATUS RgbExtStatus;
+        public byte FanExtDuty;
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = SENSOR_POWER_NUM)] public PowerSensor[] PowerReadings;
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = FAN_NUM)] public FanSensor[] Fans;
     }
@@ -87,7 +89,7 @@ public class Device_BENCHLAB
     {
         public ushort Crc;
         public byte ActiveFanProfileId;
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = PROFILE_NUM)] public ProfileConfigStruct[] FanProfile;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = FAN_PROFILE_NUM)] public ProfileConfigStruct[] FanProfile;
     }
 
     public struct ProfileConfigStruct
@@ -115,10 +117,36 @@ public class Device_BENCHLAB
         TEMP_SRC_TAMB
     }
 
+    public enum FAN_SWITCH_STATUS : byte {
+        FAN_SWITCH_STATUS_AUTO,
+        FAN_SWITCH_STATUS_50_PERCENT,
+        FAN_SWITCH_STATUS_100_PERCENT
+    };
+
+    public enum RGB_SWITCH_STATUS : byte
+    {
+        RGB_SWITCH_STATUS_WORK,
+        RGB_SWITCH_STATUS_PLAY
+    };
+    public enum RGB_EXT_STATUS : byte
+    {
+        RGB_EXT_STATUS_NOT_DETECTED,
+        RGB_EXT_STATUS_DETECTED
+    };
+
     private enum UART_CMD : byte
     {
-        UART_CMD_WELCOME = (byte)'0',
-        UART_CMD_READ_SENSOR_VALUES = (byte)'1'
+        UART_CMD_WELCOME,
+        UART_CMD_READ_SENSOR_VALUES,
+        UART_CMD_BUTTON_PRESS,
+        UART_CMD_READ_CONFIG,
+        UART_CMD_WRITE_CONFIG,
+        UART_CMD_READ_FAN_PROFILE,
+        UART_CMD_WRITE_FAN_PROFILE,
+        UART_CMD_READ_RGB,
+        UART_CMD_WRITE_RGB,
+        UART_CMD_READ_CALIBRATION,
+        UART_CMD_WRITE_CALIBRATION
     }
 
     private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
@@ -135,6 +163,12 @@ public class Device_BENCHLAB
         CONFIG_RESET
     }
 
+    public enum BUTTON : byte
+    {
+        BUTTON_POWER,
+        BUTTON_RESET,
+        BUTTON_OTHER
+    };
 
     #endregion
 
@@ -142,7 +176,7 @@ public class Device_BENCHLAB
 
     #region Identifiers
 
-    public string Name => "EFC-X9";
+    public string Name => "BENCHLAB";
     public Guid Guid { get; private set; } = Guid.Empty;
 
     #endregion
@@ -228,7 +262,7 @@ public class Device_BENCHLAB
 
         SensorList.Add(new Sensor(sensorCount++, "T_AMB", "Ambient Temperature", SensorType.Temperature));
         SensorList.Add(new Sensor(sensorCount++, "HUM", "Humidity", SensorType.Humidity));
-        SensorList.Add(new Sensor(sensorCount++, "FAN_SEL", "Fan Select", SensorType.Voltage));
+        //SensorList.Add(new Sensor(sensorCount++, "FAN_SEL", "Fan Select", SensorType.Voltage));
         SensorList.Add(new Sensor(sensorCount++, "FAN_EXT", "Fan External", SensorType.Duty));
 
         SensorList.Add(new Sensor(sensorCount++, $"SYS_P", "System Power", SensorType.Power));
@@ -242,6 +276,13 @@ public class Device_BENCHLAB
             SensorList.Add(new Sensor(sensorCount++, $"{power_sensor}_I", $"{power_sensor} Current", SensorType.Current));
             SensorList.Add(new Sensor(sensorCount++, $"{power_sensor}_P", $"{power_sensor} Power", SensorType.Power));
         }
+
+        for (int i = 0; i < FAN_NUM; i++)
+        {
+            SensorList.Add(new Sensor(sensorCount++, $"FAN{i + 1}_T", $"Fan Speed #{i + 1}", SensorType.Revolutions));
+            SensorList.Add(new Sensor(sensorCount++, $"FAN{i + 1}_D", $"Fan Duty #{i + 1}", SensorType.Duty));
+        }
+
 
         bool connected = CheckWelcomeMessage();
 
@@ -528,8 +569,8 @@ public class Device_BENCHLAB
 
         SensorList[sensorCount++].Value = sensorStruct.Tamb / 10.0f;
         SensorList[sensorCount++].Value = sensorStruct.Hum / 10.0f;
-        SensorList[sensorCount++].Value = sensorStruct.FanSel / 1000.0f;
-        SensorList[sensorCount++].Value = sensorStruct.FanExt == 255 ? double.MinValue : sensorStruct.FanExt;
+        //SensorList[sensorCount++].Value = sensorStruct.FanSwitchStatus;
+        SensorList[sensorCount++].Value = sensorStruct.FanExtDuty == 255 ? double.MinValue : sensorStruct.FanExtDuty;
 
         // Calculate total power, cpu power, gpu power, mb power
         // readonly string[] PowerSensorNames = { "EPS1", "EPS2", "ATX3V", "ATX5V", "ATX5VSB", "ATX12V", "PCIE1", "PCIE2", "PCIE3", "HPWR1", "HPWR2" };
@@ -549,6 +590,12 @@ public class Device_BENCHLAB
             SensorList[sensorCount++].Value = sensorStruct.PowerReadings[i].Voltage / 1000.0f;
             SensorList[sensorCount++].Value = sensorStruct.PowerReadings[i].Current / 1000.0f;
             SensorList[sensorCount++].Value = sensorStruct.PowerReadings[i].Power / 1000.0f;
+        }
+
+        for (int i = 0; i < FAN_NUM; i++)
+        {
+            SensorList[sensorCount++].Value = sensorStruct.Fans[i].Tach;
+            SensorList[sensorCount++].Value = sensorStruct.Fans[i].Duty;
         }
 
         return true;
@@ -666,6 +713,13 @@ public class Device_BENCHLAB
     public virtual bool ResetConfig() {
         return SendNvmCommand(UART_NVM_CMD.CONFIG_RESET);
     */
+
+    public bool SendButtonPress(BUTTON button)
+    {
+        byte[] txBuffer = new byte[] { (byte)UART_CMD.UART_CMD_BUTTON_PRESS, 0 };
+        txBuffer[1] = (byte)(1 << (int)button);
+        return SendCommand(txBuffer, out byte[] rxBuffer, 0);
+    }
 
     #endregion
 
