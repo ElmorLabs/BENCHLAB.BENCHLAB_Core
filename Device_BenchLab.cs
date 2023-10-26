@@ -941,8 +941,6 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
         byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_WRITE_RGB, 1 + size);
         txBuffer[1] = (byte)profileId;
 
-        rgbConfigStruct = new() { };
-
         if (profileId >= RGB_PROFILE_NUM)
         {
             return false;
@@ -1039,8 +1037,6 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
 
         byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_WRITE_FAN_PROFILE, 1 + size);
         txBuffer[1] = (byte)profileId;
-
-        fanConfigStruct = new() { };
 
         if (profileId >= RGB_PROFILE_NUM)
         {
