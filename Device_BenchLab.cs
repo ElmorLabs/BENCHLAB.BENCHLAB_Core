@@ -1,5 +1,6 @@
 ﻿using Microsoft.Win32;
 using System;
+using System.Drawing;
 using System.IO.Ports;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -25,6 +26,8 @@ public class Device_BENCHLAB
 
     public const int SENSOR_VIN_NUM = 13;
     public const int SENSOR_POWER_NUM = 11;
+
+    public const int RGB_PROFILE_NUM = 2;
 
     readonly string[] PowerSensorNames = { "EPS1", "EPS2", "ATX3V", "ATX5V", "ATX5VSB", "ATX12V", "PCIE1", "PCIE2", "PCIE3", "HPWR1", "HPWR2" };
 
@@ -85,22 +88,44 @@ public class Device_BENCHLAB
         public byte MaxDuty;
     }
 
-    public struct DeviceConfigStruct
-    {
-        public ushort Crc;
-        public byte ActiveFanProfileId;
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = FAN_PROFILE_NUM)] public ProfileConfigStruct[] FanProfile;
-    }
-
-    public struct ProfileConfigStruct
+    /*public struct ProfileConfigStruct
     {
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = FAN_NUM)] public FanConfigStruct[] FanConfig;
-    }
-    #endregion
+    }*/
 
-    #region Device-specific Enums
+    public struct RGBConfigStruct
+    {
+        public RGB_MODE Mode;
+        public byte Red;
+        public byte Green;
+        public byte Blue;
+        public RGB_DIRECTION Direction;
+        public byte Speed;
+    };
 
-    public enum FAN_MODE : byte
+    public struct CalibrationValueStruct
+    {
+        public Int16 Offset;
+        public Int16 GainOffset;
+    };
+
+    public struct CalibrationStruct {
+
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = SENSOR_VIN_NUM)] public CalibrationValueStruct[] Vin;
+        public CalibrationValueStruct Vdd;
+        public CalibrationValueStruct Vref;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = SENSOR_TS_NUM)] public CalibrationValueStruct[] Ts;
+        public CalibrationValueStruct Tamb;
+        public CalibrationValueStruct Hum;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = SENSOR_POWER_NUM)] public CalibrationValueStruct[] PowerReadingVoltage;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = SENSOR_POWER_NUM)] public CalibrationValueStruct[] PowerReadingCurrent;
+    };
+
+#endregion
+
+#region Device-specific Enums
+
+public enum FAN_MODE : byte
     {
         FAN_MODE_TEMP_CONTROL,
         FAN_MODE_FIXED,
@@ -149,7 +174,27 @@ public class Device_BENCHLAB
         UART_CMD_WRITE_CALIBRATION
     }
 
-    private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
+    public enum RGB_MODE : byte {
+        RGB_MODE_STATIC,
+        RGB_MODE_RAINBOW,
+        RGB_MODE_RAINBOW_CYCLE,
+        RGB_MODE_RAINBOW_COLOR_CHASE,
+        RGB_MODE_FADE_IN_OUT,
+        RGB_MODE_FADE,
+        RGB_MODE_TWINKLE,
+        RGB_MODE_METEOR_SHOWER,
+        RGB_MODE_COLOR_WIPE,
+        RGB_MODE_THEATRE_CHASE,
+        RGB_MODE_SINGLE_COLOR_CHASE
+    };
+
+    public enum RGB_DIRECTION : byte {
+        RGB_DIRECTION_CLOCKWISE,
+        RGB_DIRECTION_COUNTER_CLOCKWISE
+    };
+
+
+private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
     {
         byte[] returnArray = new byte[len + 1];
         returnArray[0] = (byte)uartCMD;
@@ -833,6 +878,204 @@ public class Device_BENCHLAB
         return true;
 
     }*/
+
+    public bool ReadRgbConfig(int profileId, out RGBConfigStruct rgbConfigStruct)
+    {
+
+        byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_READ_RGB, 1);
+        txBuffer[1] = (byte)profileId;
+        byte[] rxBuffer;
+
+        rgbConfigStruct = new() { };
+
+        if (profileId >= RGB_PROFILE_NUM)
+        {
+            return false;
+        }
+
+        // Get struct size
+        int size = Marshal.SizeOf(rgbConfigStruct);
+
+        // Get values from device
+        try
+        {
+            bool commandResult = SendCommand(txBuffer, out rxBuffer, size);
+            if (!commandResult) return false;
+        }
+        catch
+        {
+            return false;
+        }
+
+        IntPtr ptr = IntPtr.Zero;
+        try
+        {
+            ptr = Marshal.AllocHGlobal(size);
+
+            Marshal.Copy(rxBuffer, 0, ptr, size);
+
+            object? structObj = Marshal.PtrToStructure(ptr, typeof(RGBConfigStruct));
+            if (structObj != null)
+            {
+                rgbConfigStruct = (RGBConfigStruct)structObj;
+            }
+        }
+        catch
+        {
+            return false;
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(ptr);
+        }
+
+        return true;
+    }
+
+    public bool WriteRgbConfig(int profileId, RGBConfigStruct rgbConfigStruct)
+    {
+
+        // Get struct size
+        int size = Marshal.SizeOf(rgbConfigStruct);
+
+        byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_WRITE_RGB, 1 + size);
+        txBuffer[1] = (byte)profileId;
+
+        rgbConfigStruct = new() { };
+
+        if (profileId >= RGB_PROFILE_NUM)
+        {
+            return false;
+        }
+
+        IntPtr ptr = IntPtr.Zero;
+        try
+        {
+            ptr = Marshal.AllocHGlobal(size);
+            Marshal.StructureToPtr(rgbConfigStruct, ptr, true);
+            Marshal.Copy(ptr, txBuffer, 2, size);
+        }
+        catch
+        {
+            return false;
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(ptr);
+        }
+
+        // Send values to device
+        try
+        {
+            bool commandResult = SendCommand(txBuffer, out _, size);
+            if (!commandResult) return false;
+        }
+        catch
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    public bool ReadFanConfig(int profileId, out FanConfigStruct fanConfigStruct)
+    {
+
+        byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_READ_FAN_PROFILE, 1);
+        txBuffer[1] = (byte)profileId;
+        byte[] rxBuffer;
+
+        fanConfigStruct = new() { };
+
+        if (profileId >= FAN_NUM)
+        {
+            return false;
+        }
+
+        // Get struct size
+        int size = Marshal.SizeOf(fanConfigStruct);
+
+        // Get values from device
+        try
+        {
+            bool commandResult = SendCommand(txBuffer, out rxBuffer, size);
+            if (!commandResult) return false;
+        }
+        catch
+        {
+            return false;
+        }
+
+        IntPtr ptr = IntPtr.Zero;
+        try
+        {
+            ptr = Marshal.AllocHGlobal(size);
+
+            Marshal.Copy(rxBuffer, 0, ptr, size);
+
+            object? structObj = Marshal.PtrToStructure(ptr, typeof(FanConfigStruct));
+            if (structObj != null)
+            {
+                fanConfigStruct = (FanConfigStruct)structObj;
+            }
+        }
+        catch
+        {
+            return false;
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(ptr);
+        }
+
+        return true;
+    }
+
+    public bool WriteFanConfig(int profileId, FanConfigStruct fanConfigStruct)
+    {
+
+        // Get struct size
+        int size = Marshal.SizeOf(fanConfigStruct);
+
+        byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_WRITE_FAN_PROFILE, 1 + size);
+        txBuffer[1] = (byte)profileId;
+
+        fanConfigStruct = new() { };
+
+        if (profileId >= RGB_PROFILE_NUM)
+        {
+            return false;
+        }
+
+        IntPtr ptr = IntPtr.Zero;
+        try
+        {
+            ptr = Marshal.AllocHGlobal(size);
+            Marshal.StructureToPtr(fanConfigStruct, ptr, true);
+            Marshal.Copy(ptr, txBuffer, 2, size);
+        }
+        catch
+        {
+            return false;
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(ptr);
+        }
+
+        // Send values to device
+        try
+        {
+            bool commandResult = SendCommand(txBuffer, out _, size);
+            if (!commandResult) return false;
+        }
+        catch
+        {
+            return false;
+        }
+
+        return true;
+    }
 
     #endregion
 }
