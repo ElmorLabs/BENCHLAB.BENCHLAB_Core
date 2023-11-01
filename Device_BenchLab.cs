@@ -123,7 +123,7 @@ public class Device_BENCHLAB
 
 #endregion
 
-#region Device-specific Enums
+    #region Device-specific Enums
 
 public enum FAN_MODE : byte
     {
