@@ -822,7 +822,7 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
         RxData.AddRange(data.ToList());
     }
 
-    // Send command to BenchLab
+    // Send command to BENCHLAB
     private bool SendCommand(byte[] txBuffer, out byte[] rxBuffer, int rxLen)
     {
         if (_serialPort == null) throw new Exception("Serial port has not been initialized!"); //return false;
