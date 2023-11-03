@@ -15,7 +15,7 @@ public class Device_BENCHLAB
 
     public const int VENDOR_ID = 0xEE;
     public const int PRODUCT_ID = 0x10;
-    public const int FIRMWARE_VERSION = 0x01;
+    public int FIRMWARE_VERSION = 0xFF;
 
     public const int FAN_PROFILE_NUM = 3;
 
@@ -173,7 +173,7 @@ public enum FAN_MODE : byte
         UART_CMD_READ_CALIBRATION,
         UART_CMD_WRITE_CALIBRATION,
         UART_CMD_READ_UID,
-        UART_CMD_RSVD1
+        UART_CMD_READ_VENDOR_DATA,
     }
 
     public enum RGB_MODE : byte {
@@ -335,8 +335,13 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
 
         if (connected)
         {
-            // Update UID
-            connected = UpdateUID();
+            // Update vendor data
+            connected = CheckVendorData();
+            if (connected)
+            {
+                // Update UID
+                connected = UpdateUID();
+            }
         }
 
         if (connected)
@@ -541,7 +546,7 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
 
     public virtual bool UpdateSensors()
     {
-        byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_READ_SENSOR_VALUES);
+        byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_READ_SENSORS);
         byte[] rxBuffer;
 
         SensorStruct sensorStruct = new()
@@ -783,17 +788,17 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
     }
 
     // Compare device id and store firmware version
-    /*private bool CheckVendorData() {
-        byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_READ_ID);
+    private bool CheckVendorData() {
+        byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_READ_VENDOR_DATA);
         if(!SendCommand(txBuffer, out byte[] rxBuffer, 3)) {
             return false;
         }
 
-        if(rxBuffer[0] != 0xEE || rxBuffer[1] != 0x0E) return false;
+        if(rxBuffer[0] != 0xEE || rxBuffer[1] != 0x10) return false;
 
         Version = rxBuffer[2];
         return true;
-    }*/
+    }
 
     private bool UpdateUID() {
 
