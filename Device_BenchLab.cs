@@ -781,12 +781,12 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
     private bool CheckWelcomeMessage()
     {
         byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_WELCOME);
-        if (!SendCommand(txBuffer, out byte[] rxBuffer, 13))
+        if (!SendCommand(txBuffer, out byte[] rxBuffer, 9))
         {
             return false;
         }
 
-        string welcome_str = Encoding.ASCII.GetString(rxBuffer, 0, 13);
+        string welcome_str = Encoding.ASCII.GetString(rxBuffer, 0, 9);
 
         if (string.Compare(welcome_str, "BENCHLAB") != 0) return false;
 
@@ -815,7 +815,10 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
             return false;
         }
 
-        Guid = new Guid(rxBuffer);
+        byte[] guidBuffer = new byte[16];
+        Array.Copy(rxBuffer, 0, guidBuffer, 0, 12);
+
+        Guid = new Guid(guidBuffer);
 
         return true;
     }
@@ -829,7 +832,7 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
             return false;
         }
 
-        Name = Encoding.ASCII.GetString(rxBuffer, 0, 32);
+        Name = Encoding.ASCII.GetString(rxBuffer, 0, 32).TrimEnd('\0');
 
         return true;
     }
