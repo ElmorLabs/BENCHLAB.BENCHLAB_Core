@@ -223,7 +223,8 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
 
     #region Identifiers
 
-    public string Name => "BENCHLAB";
+    public string Name { get; private set; } = "BENCHLAB";
+
     public Guid Guid { get; private set; } = Guid.Empty;
 
     #endregion
@@ -330,7 +331,6 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
             SensorList.Add(new Sensor(sensorCount++, $"FAN{i + 1}_D", $"Fan Duty #{i + 1}", SensorType.Duty));
         }
 
-
         bool connected = CheckWelcomeMessage();
 
         if (connected)
@@ -341,6 +341,12 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
             {
                 // Update UID
                 connected = UpdateUID();
+
+                if(connected)
+                {
+                    // Update name
+                    connected = UpdateFriendlyName();
+                }
             }
         }
 
@@ -800,14 +806,47 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
         return true;
     }
 
-    private bool UpdateUID() {
+    private bool UpdateUID()
+    {
 
         byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_READ_UID);
-        if(!SendCommand(txBuffer, out byte[] rxBuffer, 12)) {
+        if (!SendCommand(txBuffer, out byte[] rxBuffer, 12))
+        {
             return false;
         }
 
         Guid = new Guid(rxBuffer);
+
+        return true;
+    }
+
+    public bool UpdateFriendlyName()
+    {
+
+        byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_READ_NAME);
+        if (!SendCommand(txBuffer, out byte[] rxBuffer, 32))
+        {
+            return false;
+        }
+
+        Name = Encoding.ASCII.GetString(rxBuffer, 0, 32);
+
+        return true;
+    }
+
+    public bool SetFriendlyName(string new_name)
+    {
+
+        byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_WRITE_NAME, 32);
+        byte[] nameBuffer = Encoding.ASCII.GetBytes(new_name);
+        Array.Copy(nameBuffer, 0, txBuffer, 1, nameBuffer.Length);
+
+        if (!SendCommand(txBuffer, out byte[] rxBuffer, 0))
+        {
+            return false;
+        }
+
+        Name = new_name;
 
         return true;
     }
