@@ -162,16 +162,18 @@ public enum FAN_MODE : byte
     private enum UART_CMD : byte
     {
         UART_CMD_WELCOME,
-        UART_CMD_READ_SENSOR_VALUES,
+        UART_CMD_READ_SENSORS,
         UART_CMD_BUTTON_PRESS,
-        UART_CMD_READ_CONFIG,
-        UART_CMD_WRITE_CONFIG,
+        UART_CMD_READ_NAME,
+        UART_CMD_WRITE_NAME,
         UART_CMD_READ_FAN_PROFILE,
         UART_CMD_WRITE_FAN_PROFILE,
         UART_CMD_READ_RGB,
         UART_CMD_WRITE_RGB,
         UART_CMD_READ_CALIBRATION,
-        UART_CMD_WRITE_CALIBRATION
+        UART_CMD_WRITE_CALIBRATION,
+        UART_CMD_READ_UID,
+        UART_CMD_RSVD1
     }
 
     public enum RGB_MODE : byte {
@@ -333,12 +335,8 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
 
         if (connected)
         {
-
-            if (Version > 2)
-            {
-                // Update UID
-                //connected = UpdateUID();
-            }
+            // Update UID
+            connected = UpdateUID();
         }
 
         if (connected)
@@ -516,12 +514,8 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
 
         if (connected)
         {
-
-            if (Version > 2)
-            {
-                // Update UID
-                //connected = UpdateUID();
-            }
+            // Update UID
+            //connected = UpdateUID();
         }
 
         if (connected)
@@ -783,7 +777,7 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
 
         string welcome_str = Encoding.ASCII.GetString(rxBuffer, 0, 13);
 
-        if (string.Compare(welcome_str, "OBT BenchLab") != 0) return false;
+        if (string.Compare(welcome_str, "BENCHLAB") != 0) return false;
 
         return true;
     }
@@ -801,17 +795,17 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
         return true;
     }*/
 
-    /*private bool UpdateUID() {
+    private bool UpdateUID() {
 
         byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_READ_UID);
-        if(!SendCommand(txBuffer, out byte[] rxBuffer, 16)) {
+        if(!SendCommand(txBuffer, out byte[] rxBuffer, 12)) {
             return false;
         }
 
         Guid = new Guid(rxBuffer);
 
         return true;
-    }*/
+    }
 
     // Data reception event
     private void SerialPortOnDataReceived(object sender, SerialDataReceivedEventArgs e)
