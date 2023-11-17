@@ -176,18 +176,19 @@ public enum FAN_MODE : byte
         UART_CMD_READ_VENDOR_DATA,
     }
 
-    public enum RGB_MODE : byte {
-        RGB_MODE_STATIC,
-        RGB_MODE_RAINBOW,
+    public enum RGB_MODE : byte
+    {
         RGB_MODE_RAINBOW_CYCLE,
         RGB_MODE_RAINBOW_COLOR_CHASE,
-        RGB_MODE_FADE_IN_OUT,
-        RGB_MODE_FADE,
+        RGB_MODE_RAINBOW,
         RGB_MODE_TWINKLE,
         RGB_MODE_METEOR_SHOWER,
         RGB_MODE_COLOR_WIPE,
         RGB_MODE_THEATRE_CHASE,
-        RGB_MODE_SINGLE_COLOR_CHASE
+        RGB_MODE_FADE,
+        RGB_MODE_FADE_IN_OUT,
+        RGB_MODE_SINGLE_COLOR_CHASE,
+        RGB_MODE_SINGLE_COLOR
     };
 
     public enum RGB_DIRECTION : byte {
