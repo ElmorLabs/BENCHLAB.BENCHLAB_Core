@@ -137,8 +137,8 @@ public enum FAN_MODE : byte
         TEMP_SRC_AUTO,
         TEMP_SRC_TS1,
         TEMP_SRC_TS2,
-        TEMP_SRC_TS1A,
-        TEMP_SRC_TS2A,
+        TEMP_SRC_TS3,
+        TEMP_SRC_TS4,
         TEMP_SRC_TAMB
     }
 
@@ -185,7 +185,6 @@ public enum FAN_MODE : byte
         RGB_MODE_METEOR_SHOWER,
         RGB_MODE_COLOR_WIPE,
         RGB_MODE_THEATRE_CHASE,
-        RGB_MODE_FADE,
         RGB_MODE_FADE_IN_OUT,
         RGB_MODE_SINGLE_COLOR_CHASE,
         RGB_MODE_SINGLE_COLOR
@@ -1007,7 +1006,7 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
         // Send values to device
         try
         {
-            bool commandResult = SendCommand(txBuffer, out _, size);
+            bool commandResult = SendCommand(txBuffer, out _, 0);
             if (!commandResult) return false;
         }
         catch
@@ -1104,7 +1103,7 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
         // Send values to device
         try
         {
-            bool commandResult = SendCommand(txBuffer, out _, size);
+            bool commandResult = SendCommand(txBuffer, out _, 0);
             if (!commandResult) return false;
         }
         catch
