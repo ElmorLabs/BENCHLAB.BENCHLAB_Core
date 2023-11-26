@@ -46,7 +46,7 @@ public class Device_BENCHLAB
     //[StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct PowerSensor
     {
-        public Int32 Voltage;
+        public Int16 Voltage;
         public Int32 Current;
         public Int32 Power;
     };
@@ -86,7 +86,8 @@ public class Device_BENCHLAB
         public byte FixedDuty;
         public byte MinDuty;
         public byte MaxDuty;
-    }
+        public FAN_STOP FanStop;
+    };
 
     /*public struct ProfileConfigStruct
     {
@@ -115,6 +116,7 @@ public class Device_BENCHLAB
         public CalibrationValueStruct Vdd;
         public CalibrationValueStruct Vref;
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = SENSOR_TS_NUM)] public CalibrationValueStruct[] Ts;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = SENSOR_TS_NUM)] public TS_B[] TsB;
         public CalibrationValueStruct Tamb;
         public CalibrationValueStruct Hum;
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = SENSOR_POWER_NUM)] public CalibrationValueStruct[] PowerReadingVoltage;
@@ -140,7 +142,13 @@ public enum FAN_MODE : byte
         TEMP_SRC_TS3,
         TEMP_SRC_TS4,
         TEMP_SRC_TAMB
-    }
+    };
+
+    public enum FAN_STOP : byte
+    {
+        FAN_STOP_OFF,
+        FAN_STOP_ON
+    };
 
     public enum FAN_SWITCH_STATUS : byte {
         FAN_SWITCH_STATUS_AUTO,
@@ -193,6 +201,11 @@ public enum FAN_MODE : byte
     public enum RGB_DIRECTION : byte {
         RGB_DIRECTION_CLOCKWISE,
         RGB_DIRECTION_COUNTER_CLOCKWISE
+    };
+
+    public enum TS_B : byte {
+        TS_B_3950,
+        TS_B_3380
     };
 
 
@@ -1017,16 +1030,22 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
         return true;
     }
 
-    public bool ReadFanConfig(int profileId, out FanConfigStruct fanConfigStruct)
+    public bool ReadFanConfig(int profileId, int fanId, out FanConfigStruct fanConfigStruct)
     {
 
-        byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_READ_FAN_PROFILE, 1);
+        byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_READ_FAN_PROFILE, 2);
         txBuffer[1] = (byte)profileId;
+        txBuffer[2] = (byte)fanId;
         byte[] rxBuffer;
 
         fanConfigStruct = new() { };
 
-        if (profileId >= FAN_NUM)
+        if (profileId >= FAN_PROFILE_NUM)
+        {
+            return false;
+        }
+
+        if (fanId >= FAN_NUM)
         {
             return false;
         }
@@ -1044,6 +1063,9 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
         {
             return false;
         }
+
+        // Limit to first fan
+        rxBuffer = rxBuffer.Take(size).ToArray();
 
         IntPtr ptr = IntPtr.Zero;
         try
@@ -1070,16 +1092,22 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
         return true;
     }
 
-    public bool WriteFanConfig(int profileId, FanConfigStruct fanConfigStruct)
+    public bool WriteFanConfig(int profileId, int fanId, FanConfigStruct fanConfigStruct)
     {
 
         // Get struct size
         int size = Marshal.SizeOf(fanConfigStruct);
 
-        byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_WRITE_FAN_PROFILE, 1 + size);
+        byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_WRITE_FAN_PROFILE, 2 + size);
         txBuffer[1] = (byte)profileId;
+        txBuffer[2] = (byte)fanId;
 
-        if (profileId >= RGB_PROFILE_NUM)
+        if (profileId >= FAN_PROFILE_NUM)
+        {
+            return false;
+        }
+
+        if (fanId >= FAN_NUM)
         {
             return false;
         }
@@ -1089,7 +1117,7 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
         {
             ptr = Marshal.AllocHGlobal(size);
             Marshal.StructureToPtr(fanConfigStruct, ptr, true);
-            Marshal.Copy(ptr, txBuffer, 2, size);
+            Marshal.Copy(ptr, txBuffer, 3, size);
         }
         catch
         {
