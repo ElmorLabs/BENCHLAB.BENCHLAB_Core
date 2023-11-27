@@ -29,8 +29,11 @@ public class Device_BENCHLAB
 
     public const int RGB_PROFILE_NUM = 2;
 
-    readonly string[] PowerSensorNames = { "EPS1", "EPS2", "ATX3V", "ATX5V", "ATX5VSB", "ATX12V", "PCIE1", "PCIE2", "PCIE3", "HPWR1", "HPWR2" };
+    public const int CAL_NUM = 2;
+    public const int CAL_FACTORY = 0;
+    public const int CAL_USER = 1;
 
+    readonly string[] PowerSensorNames = { "EPS1", "EPS2", "ATX3V", "ATX5V", "ATX5VSB", "ATX12V", "PCIE1", "PCIE2", "PCIE3", "HPWR1", "HPWR2" };
 
     #endregion
 
@@ -111,7 +114,6 @@ public class Device_BENCHLAB
     };
 
     public struct CalibrationStruct {
-
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = SENSOR_VIN_NUM)] public CalibrationValueStruct[] Vin;
         public CalibrationValueStruct Vdd;
         public CalibrationValueStruct Vref;
@@ -1118,6 +1120,106 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
             ptr = Marshal.AllocHGlobal(size);
             Marshal.StructureToPtr(fanConfigStruct, ptr, true);
             Marshal.Copy(ptr, txBuffer, 3, size);
+        }
+        catch
+        {
+            return false;
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(ptr);
+        }
+
+        // Send values to device
+        try
+        {
+            bool commandResult = SendCommand(txBuffer, out _, 0);
+            if (!commandResult) return false;
+        }
+        catch
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    public bool ReadCalConfig(int calId, out CalibrationStruct calibrationStruct)
+    {
+
+        byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_READ_CALIBRATION, 1);
+        txBuffer[1] = (byte)calId;
+        byte[] rxBuffer;
+
+        calibrationStruct = new() { };
+
+        if (calId >= CAL_NUM)
+        {
+            return false;
+        }
+
+        // Get struct size
+        int size = Marshal.SizeOf(calibrationStruct);
+
+        // Get values from device
+        try
+        {
+            bool commandResult = SendCommand(txBuffer, out rxBuffer, size);
+            if (!commandResult) return false;
+        }
+        catch
+        {
+            return false;
+        }
+
+        // Limit to first fan
+        rxBuffer = rxBuffer.Take(size).ToArray();
+
+        IntPtr ptr = IntPtr.Zero;
+        try
+        {
+            ptr = Marshal.AllocHGlobal(size);
+
+            Marshal.Copy(rxBuffer, 0, ptr, size);
+
+            object? structObj = Marshal.PtrToStructure(ptr, typeof(CalibrationStruct));
+            if (structObj != null)
+            {
+                calibrationStruct = (CalibrationStruct)structObj;
+            }
+        }
+        catch
+        {
+            return false;
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(ptr);
+        }
+
+        return true;
+    }
+
+    public bool WriteFanConfig(int calId, CalibrationStruct calibrationStruct)
+    {
+
+        // Get struct size
+        int size = Marshal.SizeOf(calibrationStruct);
+
+        byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_WRITE_CALIBRATION, 1 + size);
+        txBuffer[1] = (byte)calId;
+
+        if (calId >= CAL_NUM)
+        {
+            return false;
+        }
+
+        IntPtr ptr = IntPtr.Zero;
+        try
+        {
+            ptr = Marshal.AllocHGlobal(size);
+            Marshal.StructureToPtr(calibrationStruct, ptr, true);
+            Marshal.Copy(ptr, txBuffer, 2, size);
         }
         catch
         {
