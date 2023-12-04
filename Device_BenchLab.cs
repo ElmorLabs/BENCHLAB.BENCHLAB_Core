@@ -35,6 +35,8 @@ public class Device_BENCHLAB
 
     readonly string[] PowerSensorNames = { "EPS1", "EPS2", "ATX3V", "ATX5V", "ATX5VSB", "ATX12V", "PCIE1", "PCIE2", "PCIE3", "HPWR1", "HPWR2" };
 
+    private const int DEVICE_MUTEX_WAIT = 500;
+
     #endregion
 
     #region Device-specific Structs
@@ -258,6 +260,8 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
     private SerialPort? _serialPort;
     private byte[] oled_fb = new byte[128 * 64 / 8];
 
+    private Mutex deviceMutex = new Mutex();
+
     #endregion
 
     public List<Sensor> SensorList = new();
@@ -270,6 +274,10 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
 
     public virtual bool Connect(string comPort = "COM34")
     {
+        if(!deviceMutex.WaitOne(DEVICE_MUTEX_WAIT))
+        {
+            return false;
+        }
 
         Port = comPort;
         Status = DeviceStatus.CONNECTING;
@@ -293,6 +301,7 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
         catch (Exception e)
         {
             Status = DeviceStatus.ERROR;
+            deviceMutex.ReleaseMutex();
             return false;
         }
 
@@ -304,6 +313,7 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
         catch (Exception e)
         {
             Status = DeviceStatus.ERROR;
+            deviceMutex.ReleaseMutex();
             return false;
         }
 
@@ -374,13 +384,19 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
             Status = DeviceStatus.ERROR;
         }
 
-        _serialPort.DiscardInBuffer();
+        _serialPort.DiscardInBuffer(); 
+        deviceMutex.ReleaseMutex();
 
         return connected;
     }
 
     public virtual bool Disconnect()
     {
+        if (!deviceMutex.WaitOne(DEVICE_MUTEX_WAIT))
+        {
+            return false;
+        }
+
         Status = DeviceStatus.DISCONNECTING;
 
         if (_serialPort != null)
@@ -396,15 +412,18 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
             catch
             {
                 Status = DeviceStatus.ERROR;
+                deviceMutex.ReleaseMutex();
                 return false;
             }
         }
         else
         {
+            deviceMutex.ReleaseMutex();
             return false;
         }
 
         Status = DeviceStatus.DISCONNECTED;
+        deviceMutex.ReleaseMutex();
         return true;
     }
 
@@ -555,7 +574,11 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
 
         if (_serialPort != null)
         {
-            _serialPort.DiscardInBuffer();
+            if(deviceMutex.WaitOne(DEVICE_MUTEX_WAIT))
+            {
+                _serialPort.DiscardInBuffer();
+                deviceMutex.ReleaseMutex();
+            }
         }
 
         return connected;
@@ -881,11 +904,27 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
     // Send command to BENCHLAB
     private bool SendCommand(byte[] txBuffer, out byte[] rxBuffer, int rxLen)
     {
-        if (_serialPort == null) throw new Exception("Serial port has not been initialized!"); //return false;
-
-        if (!_serialPort.IsOpen) _serialPort.Open();
-
         rxBuffer = new byte[rxLen];
+
+        if (_serialPort == null) throw new Exception("Serial port has not been initialized!"); //return false;
+        
+        if(!deviceMutex.WaitOne(DEVICE_MUTEX_WAIT))
+        {
+            return false;
+        }
+
+        if (!_serialPort.IsOpen)
+        {
+            try
+            {
+                _serialPort.Open();
+            }
+            catch
+            {
+                deviceMutex.ReleaseMutex();
+                return false;
+            }
+        }
 
         try
         {
@@ -901,6 +940,7 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
             if (RxData.Count != rxBuffer.Length)
             {
                 //throw new Exception($"Buffer size mismatch! Expected {rxLen}, got {RxData.Count}");
+                deviceMutex.ReleaseMutex();
                 return false;
             }
 
@@ -909,9 +949,11 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
         catch
         {
             //throw;
+            deviceMutex.ReleaseMutex();
             return false;
         }
 
+        deviceMutex.ReleaseMutex();
         return true;
     }
 
