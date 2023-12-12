@@ -184,6 +184,8 @@ public enum FAN_MODE : byte
         UART_CMD_WRITE_RGB,
         UART_CMD_READ_CALIBRATION,
         UART_CMD_WRITE_CALIBRATION,
+        UART_CMD_LOAD_CALIBRATION,
+        UART_CMD_STORE_CALIBRATION,
         UART_CMD_READ_UID,
         UART_CMD_READ_VENDOR_DATA,
     }
@@ -1200,19 +1202,14 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
         return true;
     }
 
-    public bool ReadCalConfig(int calId, out CalibrationStruct calibrationStruct)
+    public bool ReadCalConfig(out CalibrationStruct calibrationStruct)
     {
 
-        byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_READ_CALIBRATION, 1);
-        txBuffer[1] = (byte)calId;
+        byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_READ_CALIBRATION);
+        //txBuffer[1] = (byte)calId;
         byte[] rxBuffer;
 
         calibrationStruct = new() { };
-
-        if (calId >= CAL_NUM)
-        {
-            return false;
-        }
 
         // Get struct size
         int size = Marshal.SizeOf(calibrationStruct);
@@ -1256,26 +1253,20 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
         return true;
     }
 
-    public bool WriteFanConfig(int calId, CalibrationStruct calibrationStruct)
+    public bool WriteFanConfig(CalibrationStruct calibrationStruct)
     {
 
         // Get struct size
         int size = Marshal.SizeOf(calibrationStruct);
 
-        byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_WRITE_CALIBRATION, 1 + size);
-        txBuffer[1] = (byte)calId;
-
-        if (calId >= CAL_NUM)
-        {
-            return false;
-        }
+        byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_WRITE_CALIBRATION, size);
 
         IntPtr ptr = IntPtr.Zero;
         try
         {
             ptr = Marshal.AllocHGlobal(size);
             Marshal.StructureToPtr(calibrationStruct, ptr, true);
-            Marshal.Copy(ptr, txBuffer, 2, size);
+            Marshal.Copy(ptr, txBuffer, 1, size);
         }
         catch
         {
