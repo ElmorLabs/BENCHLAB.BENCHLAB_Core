@@ -5,6 +5,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Configurations>Debug;Release;Publish</Configurations>
+    <Authors>ElmorLabs Ltd</Authors>
+    <Company>ElmorLabs Ltd</Company>
   </PropertyGroup>
 
   <ItemGroup>
