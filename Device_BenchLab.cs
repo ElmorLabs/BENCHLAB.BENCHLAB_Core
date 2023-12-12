@@ -175,7 +175,7 @@ public enum FAN_MODE : byte
     {
         UART_CMD_WELCOME,
         UART_CMD_READ_SENSORS,
-        UART_CMD_BUTTON_PRESS,
+        UART_CMD_ACTION,
         UART_CMD_READ_NAME,
         UART_CMD_WRITE_NAME,
         UART_CMD_READ_FAN_PROFILE,
@@ -232,6 +232,12 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
         BUTTON_POWER,
         BUTTON_RESET,
         BUTTON_OTHER
+    };
+
+    public enum ACTION : byte
+    {
+        ACTION_NONE,
+        ACTION_BUTTON
     };
 
     #endregion
@@ -576,7 +582,11 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
         {
             if(deviceMutex.WaitOne(DEVICE_MUTEX_WAIT))
             {
-                _serialPort.DiscardInBuffer();
+                try
+                {
+                    _serialPort.DiscardInBuffer();
+                }
+                catch { }
                 deviceMutex.ReleaseMutex();
             }
         }
@@ -804,8 +814,12 @@ private static byte[] ToByteArray(UART_CMD uartCMD, int len = 0)
 
     public bool SendButtonPress(BUTTON button)
     {
-        byte[] txBuffer = new byte[] { (byte)UART_CMD.UART_CMD_BUTTON_PRESS, 0 };
-        txBuffer[1] = (byte)(1 << (int)button);
+        byte[] txBuffer = ToByteArray(UART_CMD.UART_CMD_ACTION, 4);
+        txBuffer[1] = (byte)(ACTION.ACTION_BUTTON); // Action
+        txBuffer[2] = (byte)(button); // Button
+        txBuffer[3] = (byte)(1); // Value (0 = release, 1 = press)
+        txBuffer[4] = (byte)(2); // Value duration x * 100ms
+
         return SendCommand(txBuffer, out byte[] rxBuffer, 0);
     }
 
